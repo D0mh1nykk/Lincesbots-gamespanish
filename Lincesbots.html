@@ -1,0 +1,786 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Teotihuacán — Juego de Arqueología</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;}
+html,body{width:100%;height:100vh;overflow:hidden;background:#020110;font-family:'Courier New',monospace;}
+#wrap{width:100%;height:100vh;position:relative;}
+canvas{position:absolute;top:0;left:0;image-rendering:pixelated;image-rendering:crisp-edges;}
+#hud{position:absolute;top:0;left:0;right:0;height:32px;background:#020110;border-bottom:2px solid #ffd700;display:flex;align-items:center;gap:6px;padding:0 8px;z-index:20;}
+.sb{background:#0a051a;border:1.5px solid #ffd700;padding:2px 7px;color:#ffd700;font-size:10px;white-space:nowrap;display:flex;align-items:center;gap:4px;}
+.sb b{color:#ffff44;font-size:12px;}
+.bar{width:55px;height:7px;background:#111;border:1px solid #333;}
+.bf{height:100%;transition:width .3s;}
+#museum{position:absolute;top:34px;left:0;width:64px;background:#020110cc;border-right:2px solid #c8a000;border-bottom:2px solid #c8a000;z-index:20;padding:4px;}
+#museum h3{color:#ffd700;font-size:8px;border-bottom:1px solid #c8a000;padding-bottom:2px;margin-bottom:3px;text-align:center;}
+#slots{display:flex;flex-wrap:wrap;gap:2px;justify-content:center;}
+.slot{width:22px;height:22px;background:#0a051a;border:1px solid #333;display:flex;align-items:center;justify-content:center;font-size:13px;cursor:pointer;position:relative;}
+.slot.has{border-color:#ffd700;box-shadow:0 0 4px #ffd700;}
+.slot:hover .tt{display:block;}
+.tt{display:none;position:fixed;left:70px;top:40px;background:#020110;border:2px solid #ffd700;color:#ffd700;font-size:9px;padding:6px;z-index:100;width:180px;line-height:1.6;pointer-events:none;}
+#lb{position:absolute;bottom:8px;left:8px;width:270px;background:#020110cc;border:2px solid #00cfff;padding:6px 8px;z-index:20;pointer-events:none;}
+#lbrow{display:flex;align-items:flex-start;gap:6px;}
+#lbface{font-size:24px;flex-shrink:0;}
+#lbname{color:#00cfff;font-size:9px;font-weight:bold;}
+#lbmsg{color:#aaffff;font-size:9px;line-height:1.5;margin-top:1px;}
+#ctrl{position:absolute;top:36px;right:6px;background:#020110aa;border:1px solid #555;padding:4px 7px;color:#666;font-size:8px;line-height:2;z-index:20;}
+#dialog{position:absolute;top:36px;left:70px;right:6px;background:#020110ee;border:2px solid #ffaa00;padding:8px;z-index:30;display:none;max-width:400px;}
+#dname{color:#ffaa00;font-size:10px;font-weight:bold;margin-bottom:3px;}
+#dtext{color:#ffe0aa;font-size:9px;line-height:1.6;}
+#dclose{color:#ffaa00;font-size:8px;cursor:pointer;margin-top:4px;border:1px solid #ffaa00;display:inline-block;padding:1px 8px;}
+#digbar{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:#020110ee;border:2px solid #ffd700;padding:5px 12px;z-index:25;display:none;text-align:center;pointer-events:none;}
+#digbar span{color:#ffd700;font-size:9px;display:block;margin-bottom:3px;}
+#digprog{width:120px;height:8px;background:#111;border:1px solid #555;}
+#digfill{height:100%;background:#ffd700;width:0%;}
+#eprompt{position:absolute;top:44%;left:50%;transform:translate(-50%,-50%);background:#ffd700cc;color:#000;padding:4px 12px;font-size:11px;font-weight:bold;display:none;z-index:20;pointer-events:none;border:2px solid #c8a000;}
+#popup{position:absolute;top:40%;left:50%;transform:translate(-50%,-50%);background:#020110ee;border:2px solid #ffd700;padding:12px 16px;font-size:10px;text-align:center;display:none;z-index:50;line-height:1.8;min-width:200px;max-width:260px;}
+#btns{position:absolute;bottom:10px;right:6px;z-index:20;display:flex;flex-direction:column;gap:3px;align-items:center;}
+.br{display:flex;gap:3px;}
+.mb{width:42px;height:42px;background:#020110bb;border:2px solid #ffd700;color:#ffd700;font-size:16px;display:flex;align-items:center;justify-content:center;cursor:pointer;user-select:none;touch-action:manipulation;-webkit-user-select:none;}
+.mb:active{background:#ffd70040;}
+#bdig{position:absolute;bottom:10px;right:136px;width:52px;height:52px;background:#020110bb;border:2px solid #ffaa00;border-radius:50%;color:#ffd700;font-size:9px;font-weight:bold;display:flex;flex-direction:column;align-items:center;justify-content:center;cursor:pointer;touch-action:manipulation;z-index:20;}
+#bdig:active{background:#ffd70040;}
+#title-screen{position:absolute;top:0;left:0;right:0;bottom:0;background:#020110;z-index:100;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;}
+#title-screen h1{color:#ffd700;font-size:clamp(18px,4vw,32px);text-align:center;letter-spacing:2px;text-shadow:0 0 20px #ffd70088;}
+#title-screen p{color:#aaffff;font-size:clamp(10px,2vw,14px);text-align:center;max-width:400px;line-height:1.7;padding:0 16px;}
+#start-btn{background:#0a051a;border:2px solid #ffd700;color:#ffd700;font-family:'Courier New',monospace;font-size:clamp(12px,2vw,16px);padding:10px 28px;cursor:pointer;letter-spacing:1px;transition:background .2s;}
+#start-btn:hover{background:#ffd70020;}
+.pyr-deco{color:#c8a050;font-size:clamp(24px,6vw,48px);opacity:.4;letter-spacing:8px;}
+</style>
+</head>
+<body>
+<div id="wrap">
+<canvas id="c"></canvas>
+
+<!-- Title screen -->
+<div id="title-screen">
+  <div class="pyr-deco">▲ ▲ ▲</div>
+  <h1>TEOTIHUACÁN<br><span style="font-size:.55em;color:#c8a050">Arqueóloga de los Dioses</span></h1>
+  <p>Eres la Dra. Maya, arqueóloga en Teotihuacán. Excava artefactos prehispánicos, habla con los habitantes de la ciudad y descubre los secretos de la Pirámide del Sol.</p>
+  <button id="start-btn" onclick="startGame()">[ INICIAR EXPEDICIÓN ]</button>
+  <div style="color:#555;font-size:10px;text-align:center;line-height:2">
+    ← → mover &nbsp;|&nbsp; ↑ / ↑↑ saltar (doble salto) &nbsp;|&nbsp; E excavar / hablar &nbsp;|&nbsp; R info<br>
+    En móvil: usa los botones de pantalla
+  </div>
+  <div class="pyr-deco" style="font-size:clamp(14px,3vw,24px)">⛏ 🏺 😐 🔥 🗿 🗡️</div>
+</div>
+
+<!-- HUD -->
+<div id="hud" style="display:none">
+  <div class="sb">DRA.MAYA <span style="color:#888;font-size:8px">HP</span><div class="bar"><div class="bf" id="bhp" style="width:100%;background:#e53"></div></div></div>
+  <div class="sb">NIV<b id="lvl">1</b> <span style="color:#888;font-size:8px">XP</span><div class="bar"><div class="bf" id="bxp" style="width:0%;background:#4af"></div></div></div>
+  <div class="sb">🏺 <b id="artc">0</b>/5</div>
+  <div class="sb" style="margin-left:auto;color:#555;font-size:7px">← → ↑ E R</div>
+</div>
+
+<div id="museum" style="display:none">
+  <h3>[MUSEO]</h3>
+  <div id="slots">
+    <div class="slot" id="sl0"><span class="tt"></span></div>
+    <div class="slot" id="sl1"><span class="tt"></span></div>
+    <div class="slot" id="sl2"><span class="tt"></span></div>
+    <div class="slot" id="sl3"><span class="tt"></span></div>
+    <div class="slot" id="sl4"><span class="tt"></span></div>
+  </div>
+  <div style="color:#555;font-size:7px;text-align:center;margin-top:3px">hover=info</div>
+</div>
+
+<div id="lb" style="display:none">
+  <div id="lbrow">
+    <div id="lbface">🐱</div>
+    <div style="flex:1">
+      <div id="lbname">⚡ LINCEBOT — Asistente Arqueológico IA</div>
+      <div id="lbmsg">Bienvenida Dra. Maya! Flechas para moverte, doble Arriba para doble salto. E excava puntos dorados o habla con NPCs.</div>
+    </div>
+  </div>
+</div>
+
+<div id="ctrl" style="display:none">← → mover<br>↑ saltar<br>E accion<br>R info</div>
+<div id="dialog"><div id="dname"></div><div id="dtext"></div><div id="dclose" onclick="closeDialog()">[ Continuar → ]</div></div>
+<div id="digbar"><span>⛏ EXCAVANDO...</span><div id="digprog"><div id="digfill"></div></div></div>
+<div id="eprompt"></div>
+<div id="popup"></div>
+
+<div id="btns" style="display:none">
+  <div class="br"><div class="mb" id="mbu">▲</div></div>
+  <div class="br"><div class="mb" id="mbl">◀</div><div class="mb" id="mbr2">▶</div></div>
+</div>
+<div id="bdig" style="display:none">⛏<br>E</div>
+</div>
+
+<script>
+// ── CANVAS ──────────────────────────────────────────────
+const cv=document.getElementById('c'),cx=cv.getContext('2d');
+cx.imageSmoothingEnabled=false;
+const CW=360,CH=210;
+cv.width=CW;cv.height=CH;
+
+function resize(){
+  const ww=window.innerWidth,wh=window.innerHeight;
+  const avH=wh-32;
+  const sc=Math.min(ww/CW,avH/CH);
+  const sw=Math.round(CW*sc),sh=Math.round(CH*sc);
+  cv.style.width=sw+'px';cv.style.height=sh+'px';
+  cv.style.left=Math.round((ww-sw)/2)+'px';
+  cv.style.top='32px';
+}
+resize();window.addEventListener('resize',resize);
+
+// ── CONSTANTS ───────────────────────────────────────────
+const TW=16,WW=130,WH=28;
+const T={A:0,G:1,P:2,D:3,C:4};
+
+// ── DATA ────────────────────────────────────────────────
+const ARTS=[
+  {n:'Vasija de Obsidiana',sym:'🏺',col:'#4444aa',info:'Recipiente de obsidiana negra volcánica. Más valiosa que el oro en Mesoamérica. Usada para almacenar agua sagrada y ofrendas rituales. Circa 200 d.C.'},
+  {n:'Máscara de Jade',sym:'😐',col:'#208060',info:'Máscara funeraria tallada en jade verde. Solo la realeza la poseía. El jade simbolizaba el agua y la inmortalidad. Colocada sobre difuntos de élite.'},
+  {n:'Incensario de Copal',sym:'🔥',col:'#994422',info:'Brasero cerámico para quemar copal, resina sagrada. El humo representaba el aliento de los dioses. Hallado en el Templo del Sol.'},
+  {n:'Figura de Tláloc',sym:'🗿',col:'#1a3388',info:'Escultura del dios de la lluvia. Sus ojos de anteojos son inconfundibles. Adorado desde 100 a.C. Su culto se extendió 1500 años por toda Mesoamérica.'},
+  {n:'Cuchillo de Sílex',sym:'🗡️',col:'#998877',info:'Cuchillo ritual tallado en sílex gris. Técnica de tallado por presión. Usado en ceremonias y cotidianidad. Mide aproximadamente 22 cm.'},
+];
+
+const NPCS=[
+  {tx:8,ty:21,name:'Sacerdote Itzamna',col:'#7030b0',hat:'#401080',
+   lines:['Estás en la CALZADA DE LOS MUERTOS. 4 km de avenida sagrada que conecta todas las estructuras.','No es camino de muertos — es el camino hacia los dioses vivos de Teotihuacán.','Teotihuacán significa: Lugar donde los hombres se hacen dioses. Fue fundada hacia el año 100 a.C.','En su apogeo vivían aquí 200,000 personas. Era la sexta ciudad más grande del mundo antiguo.']},
+  {tx:28,ty:21,name:'Tlacuilo (Pintor)',col:'#b05018',hat:'#702808',
+   lines:['Pinté los murales de la Pirámide de la Luna durante 20 años de mi vida.','Aunque es 15 metros más baja que la del Sol, se ven igual desde la cima por el desnivel del suelo.','Dentro hay 7 tumbas con sacrificios rituales de humanos y jaguares. Descubiertas por arqueólogos en 2004.','Los murales muestran a la diosa del agua rodeada de serpientes emplumadas y símbolo de lluvia.']},
+  {tx:60,ty:21,name:'Astrónomo Citlali',col:'#105890',hat:'#082840',
+   lines:['La Pirámide del Sol está alineada con el sol exactamente el 13 de agosto y el 29 de abril.','Esas fechas dividían el año agrícola en dos mitades iguales para plantar y cosechar.','Bajo la pirámide existe una cueva natural de 100 metros de largo usada en rituales de creación.','Tiene 4 lados y 5 cuerpos escalonados. Con su plataforma superior mide 75 metros de altura.']},
+  {tx:90,ty:21,name:'Guerrero Quetzal',col:'#107840',hat:'#053818',
+   lines:['El Templo de Quetzalpapálotl es el palacio más decorado de toda Teotihuacán.','Sus columnas tienen tallados del dios mariposa-quetzal con ojos de obsidiana incrustados.','La ciudad fue incendiada y abandonada misteriosamente en el siglo VI d.C.','El origen del colapso sigue siendo un misterio para los arqueólogos modernos.']},
+  {tx:112,ty:21,name:'Mercader Xóchitl',col:'#a08010',hat:'#605008',
+   lines:['Vengo de Monte Albán, Oaxaca. Teotihuacán tenía barrios para cada grupo étnico.','Comerciábamos obsidiana, jade, plumas de quetzal, cerámica y cacao por toda Mesoamérica.','La red comercial llegaba hasta lo que hoy es Guatemala y el norte de México.','Los aztecas llegaron 700 años después y encontraron la ciudad abandonada. La llamaron Ciudad de los Dioses.']},
+];
+
+const LBMSG={
+  start:'¡Bienvenida Dra. Maya! Usa flechas para moverte. Doble Arriba = doble salto! E excava puntos dorados o habla con los 5 NPCs.',
+  sun:'PIRÁMIDE DEL SOL: 65 m de altura, 225 m de base. Construida hacia 100 d.C. sobre una cueva natural. Tercera pirámide más grande del mundo.',
+  moon:'PIRÁMIDE DE LA LUNA: Alineada con el volcán Cerro Gordo. Contiene 7 tumbas rituales descubiertas en 2004 con humanos y jaguares.',
+  quetzal:'TEMPLO DE QUETZALPAPÁLOTL: Palacio sacerdotal con columnas del dios mariposa y ojos de obsidiana brillantes incrustados.',
+  dig:'¡La arqueología real requiere semanas de trabajo cuidadoso para lo que haces en segundos! Cada centímetro puede esconder historia.',
+  found:'¡Hallazgo extraordinario! En arqueología real se documenta la posición exacta antes de mover cualquier objeto del suelo.',
+  level:'¡Nivel nuevo! Los arqueólogos estudian mínimo 5 años antes de dirigir su primera excavación importante.',
+  npc:'¡Un habitante de Teotihuacán! Presiona E para escuchar su historia y conocer los secretos de esta ciudad milenaria.',
+  done:'¡MISIÓN COMPLETADA! Los 5 artefactos están en el Museo. ¡Eres la mejor arqueóloga de México y Teotihuacán te lo agradece!',
+};
+function setLB(k){document.getElementById('lbmsg').textContent=LBMSG[k]||k;}
+
+// ── WORLD GEN ───────────────────────────────────────────
+let world=[],dspots=[],npcList=[];
+
+function pyra(bx,by,hw,h){
+  for(let l=0;l<h;l++){
+    const y=by-l,w=Math.max(1,Math.round(hw*(1-l/h)));
+    for(let x=bx-w;x<=bx+w;x++)
+      if(x>=0&&x<WW&&y>=0&&y<WH)world[y][x]=T.P;
+  }
+}
+function gen(){
+  world=[];
+  for(let y=0;y<WH;y++){world[y]=[];for(let x=0;x<WW;x++)world[y][x]=T.A;}
+  for(let y=22;y<WH;y++)for(let x=0;x<WW;x++)world[y][x]=T.G;
+  pyra(16,21,10,12);
+  pyra(58,21,20,20);
+  pyra(90,21,11,10);
+  pyra(110,21,6,6);
+  [[24,17,6],[34,15,5],[46,13,4],[70,14,5],[80,16,5],[98,16,4],[116,17,4]].forEach(([x,y,w])=>{
+    for(let i=0;i<w;i++)world[y][x+i]=T.P;
+  });
+  [[84,18],[85,18],[84,19],[85,19],[84,20],[85,20],
+   [95,18],[96,18],[95,19],[96,19],[95,20],[96,20]].forEach(([x,y])=>world[y][x]=T.C);
+  dspots=[];
+  [[5,23],[14,23],[36,23],[50,23],[68,23],[82,23],[100,23],[114,23],[40,22],[76,22]].forEach(([x,y],i)=>{
+    if(world[y]&&world[y][x]===T.A){
+      world[y][x]=T.D;
+      dspots.push({x,y,art:i<5?ARTS[i]:null,found:false,sp:0,digging:false});
+    }
+  });
+  npcList=NPCS.map(n=>({...n,lineIdx:0,talking:false,anim:0}));
+}
+gen();
+
+// ── PLAYER ──────────────────────────────────────────────
+const pl={x:60,y:200,vx:0,vy:0,w:9,h:15,gnd:false,f:1,
+  step:0,stepT:0,hp:100,xp:0,lv:1,
+  state:'idle',digT:0,digging:false,
+  jumps:0,maxJumps:2,squash:0};
+let found=0,tick=0,msgT=0,nearDig=null,nearNPC=null,dialogOpen=false;
+let particles=[],cam={x:0,y:0};
+let gameStarted=false;
+
+// ── START ────────────────────────────────────────────────
+function startGame(){
+  gameStarted=true;
+  document.getElementById('title-screen').style.display='none';
+  ['hud','museum','lb','ctrl','btns','bdig'].forEach(id=>{
+    document.getElementById(id).style.display=id==='btns'?'flex':'block';
+  });
+  document.getElementById('bdig').style.display='flex';
+}
+
+// ── INPUT ────────────────────────────────────────────────
+const keys={};
+document.addEventListener('keydown',e=>{
+  if(!gameStarted)return;
+  if(['ArrowLeft','ArrowRight','ArrowUp','ArrowDown',' ','e','E','r','R'].includes(e.key))e.preventDefault();
+  keys[e.key]=true;
+  if((e.key==='ArrowUp'||e.key===' ')&&!pl.digging)doJump();
+  if(e.key==='e'||e.key==='E'){
+    if(dialogOpen)closeDialog();
+    else if(nearNPC&&!pl.digging)openDialog();
+    else startDig();
+  }
+  if(e.key==='r'||e.key==='R')cycleInfo();
+},{passive:false});
+document.addEventListener('keyup',e=>keys[e.key]=false);
+
+function mhold(id,k){
+  const el=document.getElementById(id);if(!el)return;
+  el.addEventListener('touchstart',e=>{if(!gameStarted)return;keys[k]=true;e.preventDefault();},{passive:false});
+  el.addEventListener('touchend',()=>keys[k]=false);
+  el.addEventListener('mousedown',()=>{if(!gameStarted)return;keys[k]=true;});
+  el.addEventListener('mouseup',()=>keys[k]=false);
+  el.addEventListener('mouseleave',()=>keys[k]=false);
+}
+mhold('mbl','ArrowLeft');mhold('mbr2','ArrowRight');
+document.getElementById('mbu').addEventListener('touchstart',e=>{if(!gameStarted)return;doJump();e.preventDefault();},{passive:false});
+document.getElementById('mbu').addEventListener('mousedown',()=>{if(!gameStarted)return;doJump();});
+document.getElementById('bdig').addEventListener('click',()=>{
+  if(!gameStarted)return;
+  if(dialogOpen)closeDialog();
+  else if(nearNPC&&!pl.digging)openDialog();
+  else startDig();
+});
+document.getElementById('bdig').addEventListener('touchstart',e=>{
+  if(!gameStarted)return;
+  if(dialogOpen)closeDialog();
+  else if(nearNPC&&!pl.digging)openDialog();
+  else startDig();
+  e.preventDefault();
+},{passive:false});
+
+// ── ACTIONS ─────────────────────────────────────────────
+function doJump(){
+  if(pl.digging||pl.jumps>=pl.maxJumps)return;
+  pl.vy=-4.6-(pl.jumps>0?.5:0);
+  pl.gnd=false;pl.jumps++;pl.squash=-2;
+  spawnDust();
+  if(pl.jumps===2)for(let i=0;i<8;i++){
+    const a=(i/8)*Math.PI*2;
+    particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h/2,vx:Math.cos(a)*1.4,vy:Math.sin(a)*1.4,life:18,col:'#aaffff',sz:1.5});
+  }
+}
+
+let infoIdx=0;
+const infoKeys=['start','sun','moon','quetzal','dig'];
+function cycleInfo(){infoIdx=(infoIdx+1)%infoKeys.length;setLB(infoKeys[infoIdx]);}
+
+function openDialog(){
+  if(!nearNPC||dialogOpen)return;
+  dialogOpen=true;nearNPC.lineIdx=0;nearNPC.talking=true;
+  document.getElementById('dname').textContent='[ '+nearNPC.name+' ]';
+  document.getElementById('dtext').textContent=nearNPC.lines[0];
+  document.getElementById('dialog').style.display='block';
+  setLB('npc');
+}
+function closeDialog(){
+  if(!nearNPC&&!dialogOpen)return;
+  if(nearNPC){
+    const n=nearNPC;
+    n.lineIdx=(n.lineIdx+1)%n.lines.length;
+    if(n.lineIdx===0){n.talking=false;dialogOpen=false;document.getElementById('dialog').style.display='none';}
+    else document.getElementById('dtext').textContent=n.lines[n.lineIdx];
+  }else{dialogOpen=false;document.getElementById('dialog').style.display='none';}
+}
+document.getElementById('dialog').addEventListener('click',function(e){if(e.target.id!=='dclose')closeDialog();});
+document.getElementById('dclose').addEventListener('click',closeDialog);
+
+function startDig(){
+  if(pl.digging||dialogOpen)return;
+  let best=null,bestD=Infinity;
+  dspots.forEach(ds=>{
+    if(ds.found)return;
+    const d=Math.hypot(ds.x*TW+TW/2-(pl.x+pl.w/2),ds.y*TW+TW/2-(pl.y+pl.h));
+    if(d<TW*2.5&&d<bestD){bestD=d;best=ds;}
+  });
+  if(!best)return;
+  nearDig=best;
+  pl.digging=true;pl.digT=0;best.digging=true;
+  document.getElementById('digbar').style.display='block';
+  setLB('dig');
+}
+function finishDig(){
+  const ds=nearDig;
+  if(!ds){pl.digging=false;pl.digT=0;document.getElementById('digbar').style.display='none';return;}
+  ds.found=true;ds.digging=false;
+  if(world[ds.y]&&world[ds.y][ds.x]===T.D)world[ds.y][ds.x]=T.G;
+  pl.digging=false;pl.digT=0;
+  document.getElementById('digbar').style.display='none';
+  document.getElementById('digfill').style.width='0%';
+  spawnFoundFX(ds.x*TW+TW/2,ds.y*TW+TW/2);
+  nearDig=null;
+  if(ds.art){
+    found++;document.getElementById('artc').textContent=found;
+    addMuseum(ds.art);setLB('found');
+    // Add floating artifact at dig location
+    const artIdx=ARTS.indexOf(ds.art);
+    collectedArtifacts.push({
+      x:ds.x*TW+TW/2, y:ds.y*TW,
+      artIdx, name:ds.art.n, col:ds.art.col
+    });
+    showPop('★ '+ds.art.n+' ★\n\n'+ds.art.info,'#ffd700');
+    addXP(40);
+    if(found>=5)setTimeout(()=>{setLB('done');showPop('★ MISIÓN COMPLETADA ★\nTodos los artefactos en el Museo!\n¡Teotihuacán te lo agradece!','#00ff88');},2000);
+  }else{showPop('Solo tierra y cascajo...\nSigue explorando.\n5 artefactos ocultos en el mapa.','#888');addXP(8);}
+}
+
+function addMuseum(art){
+  const i=ARTS.indexOf(art);if(i<0)return;
+  const sl=document.getElementById('sl'+i);if(!sl)return;
+  sl.textContent=art.sym;sl.classList.add('has');
+  sl.querySelector('.tt').innerHTML='<b>'+art.n+'</b><br>'+art.info;
+}
+function addXP(n){
+  pl.xp+=n;const need=pl.lv*100;
+  if(pl.xp>=need){pl.xp-=need;pl.lv++;document.getElementById('lvl').textContent=pl.lv;setLB('level');showPop('★ NIVEL '+pl.lv+' ★\n¡Arqueóloga experta!','#00cfff');}
+  document.getElementById('bxp').style.width=Math.round(pl.xp/(pl.lv*100)*100)+'%';
+}
+function showPop(txt,col){
+  const el=document.getElementById('popup');
+  el.innerHTML=txt.replace(/\n/g,'<br>');el.style.color=col;el.style.display='block';msgT=340;
+}
+
+// ── PARTICLES ───────────────────────────────────────────
+function spawnDust(){for(let i=0;i<5;i++)particles.push({x:pl.x+pl.w/2,y:pl.y+pl.h,vx:(Math.random()-.5)*2,vy:-Math.random()*.8,life:16,col:'#c8a050',sz:1});}
+function spawnDigPfx(){
+  const dx=nearDig?nearDig.x*TW+TW/2:pl.x+pl.w/2+(pl.f>0?9:-9);
+  const dy=nearDig?nearDig.y*TW:pl.y+pl.h-3;
+  for(let i=0;i<4;i++){
+    const a=Math.random()*Math.PI;
+    particles.push({x:dx,y:dy,vx:Math.cos(a)*.8,vy:-Math.random()-.2,
+      life:20,col:['#c8a050','#8a6830','#ffd700','#3a2010'][i%4],sz:1+Math.random()});
+  }
+}
+function spawnFoundFX(fx,fy){
+  for(let i=0;i<24;i++){
+    const a=(i/24)*Math.PI*2,spd=.6+Math.random()*2.5;
+    particles.push({x:fx,y:fy,vx:Math.cos(a)*spd,vy:Math.sin(a)*spd-1.8,
+      life:45,col:['#ffd700','#ffff00','#fff','#ffaa00'][i%4],sz:1+Math.random()*2});
+  }
+}
+
+// ── COLLISION ───────────────────────────────────────────
+function gt(wx,wy){
+  const tx=Math.floor(wx/TW),ty=Math.floor(wy/TW);
+  if(tx<0||tx>=WW||ty<0||ty>=WH)return T.G;
+  if(!world[ty])return T.G;
+  return world[ty][tx]||T.A;
+}
+function sol(t){return t===T.G||t===T.P||t===T.C;}
+
+// ── UPDATE ──────────────────────────────────────────────
+function update(){
+  if(!gameStarted)return;
+  tick++;
+  if(pl.squash>0)pl.squash=Math.max(0,pl.squash-.25);
+  if(pl.squash<0)pl.squash=Math.min(0,pl.squash+.25);
+
+  if(pl.digging){
+    pl.digT++;pl.vx*=.5;
+    if(pl.digT%5===0)spawnDigPfx();
+    document.getElementById('digfill').style.width=Math.round(pl.digT/60*100)+'%';
+    if(pl.digT>=60)finishDig();
+  }else if(!dialogOpen){
+    const spd=1.8;
+    if(keys['ArrowLeft']){pl.vx=Math.max(pl.vx-.4,-spd);pl.f=-1;}
+    else if(keys['ArrowRight']){pl.vx=Math.min(pl.vx+.4,spd);pl.f=1;}
+    else pl.vx*=.78;
+  }else pl.vx*=.6;
+
+  pl.vy=Math.min(pl.vy+.24,7);
+  pl.x+=pl.vx;
+  if(pl.vx>0&&(sol(gt(pl.x+pl.w,pl.y+2))||sol(gt(pl.x+pl.w,pl.y+pl.h-2)))){pl.x=Math.floor((pl.x+pl.w)/TW)*TW-pl.w-.5;pl.vx=0;}
+  if(pl.vx<0&&(sol(gt(pl.x,pl.y+2))||sol(gt(pl.x,pl.y+pl.h-2)))){pl.x=Math.floor(pl.x/TW)*TW+TW+.5;pl.vx=0;}
+  pl.y+=pl.vy;pl.gnd=false;
+  if(pl.vy>0&&(sol(gt(pl.x+2,pl.y+pl.h))||sol(gt(pl.x+pl.w-2,pl.y+pl.h)))){
+    if(pl.vy>2){pl.squash=2;spawnDust();}
+    pl.y=Math.floor((pl.y+pl.h)/TW)*TW-pl.h-.5;pl.vy=0;pl.gnd=true;pl.jumps=0;
+  }
+  if(pl.vy<0&&(sol(gt(pl.x+2,pl.y))||sol(gt(pl.x+pl.w-2,pl.y)))){pl.y=Math.floor(pl.y/TW)*TW+TW+.5;pl.vy=0;}
+  pl.x=Math.max(0,Math.min(pl.x,(WW-1)*TW));
+  if(pl.y>WH*TW+60){pl.x=60;pl.y=180;pl.vy=0;}
+
+  if(pl.gnd&&Math.abs(pl.vx)>.3){pl.stepT++;if(pl.stepT%4===0)pl.step=(pl.step+1)%4;}else pl.step=0;
+
+  if(pl.digging)pl.state='dig';
+  else if(!pl.gnd&&pl.vy<0)pl.state='rise';
+  else if(!pl.gnd)pl.state='fall';
+  else if(Math.abs(pl.vx)>.3)pl.state='walk';
+  else pl.state='idle';
+
+  cam.x+=(pl.x+pl.w/2-CW/2-cam.x)*.13;
+  cam.y+=(pl.y+pl.h/2-CH/2-cam.y)*.13;
+  cam.x=Math.max(0,Math.min(cam.x,WW*TW-CW));
+  cam.y=Math.max(0,Math.min(cam.y,WH*TW-CH));
+
+  nearDig=null;nearNPC=null;
+  const pcx=pl.x+pl.w/2,pcy=pl.y+pl.h;
+  dspots.forEach(ds=>{
+    if(ds.found)return;ds.sp+=.09;
+    if(Math.hypot(ds.x*TW+TW/2-pcx,ds.y*TW+TW/2-pcy)<TW*2.4)nearDig=ds;
+  });
+  if(!pl.digging)npcList.forEach(n=>{
+    n.anim+=.05;
+    if(Math.hypot(n.tx*TW+TW/2-pcx,n.ty*TW-pcy)<TW*3)nearNPC=n;
+  });
+
+  const ep=document.getElementById('eprompt');
+  if(!pl.digging&&((nearDig&&!nearDig.found&&!dialogOpen)||(nearNPC&&!dialogOpen))){
+    ep.style.display='block';ep.textContent=nearNPC?'[ E ] HABLAR':'[ E ] EXCAVAR';
+  }else ep.style.display='none';
+
+  particles=particles.filter(pt=>{pt.x+=pt.vx;pt.y+=pt.vy;pt.vy+=.08;pt.life--;return pt.life>0;});
+  if(msgT>0){msgT--;if(msgT===0)document.getElementById('popup').style.display='none';}
+
+  if(tick%600===0){
+    const ptx=Math.floor(pcx/TW);
+    if(ptx>45&&ptx<73)setLB('sun');
+    else if(ptx<22)setLB('moon');
+    else if(ptx>78&&ptx<103)setLB('quetzal');
+  }
+}
+
+// ── DRAW HELPERS ────────────────────────────────────────
+function p(x,y,w,h,col){cx.fillStyle=col;cx.fillRect(Math.round(x),Math.round(y),w,h);}
+function wts(wx,wy){return[Math.round(wx-cam.x),Math.round(wy-cam.y)];}
+
+const STARS=Array.from({length:140},(_,i)=>({
+  x:(i*43.7)%(WW*TW),y:(i*19.3+50)%(CH*0.9),
+  phase:Math.random()*Math.PI*2,sz:i%12===0?2:1
+}));
+
+// ── DRAW SKY ────────────────────────────────────────────
+function drawSky(){
+  const g=cx.createLinearGradient(0,0,0,CH);
+  g.addColorStop(0,'#020118');g.addColorStop(.4,'#080535');g.addColorStop(.8,'#120840');g.addColorStop(1,'#1a0820');
+  cx.fillStyle=g;cx.fillRect(0,0,CW,CH);
+  cx.globalAlpha=.06;
+  cx.fillStyle='#6030ff';cx.beginPath();cx.ellipse(CW*.3-cam.x*.03,CH*.22,90,32,0,0,Math.PI*2);cx.fill();
+  cx.fillStyle='#ff2080';cx.beginPath();cx.ellipse(CW*.72-cam.x*.03,CH*.18,65,22,.3,0,Math.PI*2);cx.fill();
+  cx.globalAlpha=1;
+  STARS.forEach(s=>{
+    const sx=((s.x-cam.x*.07)%(CW+20)+CW+20)%(CW+20)-10;
+    const sy=s.y%(CH*.62);
+    if(sx<-2||sx>CW+2||sy<0)return;
+    cx.globalAlpha=(Math.sin(tick*.035+s.phase)+1)*.4+.2;
+    p(sx,sy,s.sz,s.sz,'#ffffc8');
+  });
+  cx.globalAlpha=1;
+  const mx=Math.round(CW*.8-cam.x*.01),my=16;
+  cx.globalAlpha=.12;cx.fillStyle='#fffce0';cx.beginPath();cx.arc(mx,my,16,0,Math.PI*2);cx.fill();cx.globalAlpha=1;
+  for(let dy=-8;dy<=8;dy++)for(let dx=-8;dx<=8;dx++){
+    if(dx*dx+dy*dy<=64)p(mx+dx,my+dy,1,1,dx>2?'#ccc090':'#fff8e0');
+  }
+  p(mx+2,my-2,2,2,'#e8d8a0');p(mx-3,my+2,2,2,'#e8d8a0');
+  cx.globalAlpha=.38;
+  const mo=cam.x*.16;
+  for(let rep=-1;rep<=1;rep++){
+    cx.fillStyle='#150535';
+    cx.beginPath();const bx=rep*500-mo%500;
+    cx.moveTo(bx,CH);cx.lineTo(bx,CH*.55);cx.lineTo(bx+25,CH*.32);cx.lineTo(bx+55,CH*.48);
+    cx.lineTo(bx+80,CH*.25);cx.lineTo(bx+110,CH*.44);cx.lineTo(bx+140,CH*.35);
+    cx.lineTo(bx+180,CH*.52);cx.lineTo(bx+210,CH*.42);cx.lineTo(bx+240,CH*.55);cx.lineTo(bx+260,CH);cx.fill();
+  }
+  cx.globalAlpha=1;
+}
+
+// ── DRAW TILE ───────────────────────────────────────────
+function drawTile(tx,ty){
+  const t=world[ty]?world[ty][tx]:T.A;
+  if(!t||t===T.A)return;
+  const rx=Math.round(tx*TW-cam.x),ry=Math.round(ty*TW-cam.y);
+  if(rx<-TW||rx>CW+TW||ry<-TW||ry>CH+TW)return;
+
+  if(t===T.G){
+    if(ty===22){
+      p(rx,ry,TW,TW,'#3a2010');
+      p(rx,ry,TW,6,'#1a6808');p(rx,ry,TW,2,'#28a010');p(rx,ry+1,TW,1,'#36c818');
+      if(tx%2===0){p(rx+1,ry-5,1,6,'#28a010');p(rx+4,ry-6,1,7,'#1a6808');p(rx+7,ry-4,1,5,'#28a010');p(rx+11,ry-5,1,6,'#1a6808');}
+    }else{
+      p(rx,ry,TW,TW,ty>24?'#190a04':'#241108');
+      if((tx+ty)%4===0)p(rx+3,ry+5,3,2,'#301506');
+      if((tx*3+ty*2)%7===0)p(rx+9,ry+10,3,2,'#281004');
+    }
+  }else if(t===T.P){
+    const ev=(tx+ty)%2===0;
+    p(rx,ry,TW,TW,ev?'#c8a050':'#b89040');
+    p(rx,ry,TW,2,'#e8c870');p(rx,ry+2,TW,1,'#d4b055');
+    p(rx+TW-2,ry,2,TW,'#7a5818');p(rx,ry+TW-2,TW,2,'#7a5818');
+    if(ty%2===0){p(rx,ry+7,TW,1,'#8a6820');p(rx,ry+8,TW,1,'#504010');}
+    if(tx%2===0){p(rx+7,ry,1,TW,'#8a6820');p(rx+8,ry,1,TW,'#504010');}
+    const isSol=Math.abs(tx-58)<14&&ty<22&&ty>10;
+    if(isSol&&ty%4===1&&(tx+ty)%4===0){p(rx+3,ry+3,10,2,'#9a7830');p(rx+3,ry+3,2,10,'#9a7830');}
+  }else if(t===T.C){
+    p(rx,ry,TW,TW,'#b89040');p(rx+2,ry,TW-4,TW,'#a07830');
+    p(rx,ry,TW,3,'#e0c050');p(rx,ry+TW-3,TW,3,'#e0c050');
+    for(let i=4;i<TW-1;i+=3)p(rx+i,ry+3,1,TW-6,'#806020');
+    if(ty===18){
+      p(rx+2,ry+5,4,4,'#001133');p(rx+10,ry+5,4,4,'#001133');
+      cx.globalAlpha=.8;p(rx+3,ry+6,2,2,'#00aaff');p(rx+11,ry+6,2,2,'#00aaff');cx.globalAlpha=1;
+    }
+  }else if(t===T.D){
+    const ds=dspots.find(d=>d.x===tx&&d.y===ty);
+    p(rx,ry,TW,TW,'#2a1508');
+    if(ds&&ds.digging){
+      const f=Math.floor(tick/3)%4;
+      p(rx+7,ry,2,TW,'#ffd700');p(rx,ry+7,TW,2,'#ffd700');
+      if(f>0){p(rx+3,ry+3,2,10,'#c8a000');p(rx+3,ry+3,10,2,'#c8a000');}
+      if(f>1){p(rx+1,ry+12,14,2,'#ffaa00');p(rx+12,ry+1,2,14,'#ffaa00');}
+      if(f>2){p(rx+1,ry+1,3,3,'#ffff88');p(rx+12,ry+12,3,3,'#ffff88');}
+    }else if(ds){
+      const glow=(Math.sin(ds.sp)+1)*.5>.5;
+      const gc=glow?'#ffd700':'#a08000';
+      p(rx+3,ry+3,2,1,gc);p(rx+5,ry+5,2,1,gc);p(rx+7,ry+7,2,1,gc);
+      p(rx+10,ry+3,2,1,gc);p(rx+9,ry+4,2,1,gc);p(rx+8,ry+5,2,1,gc);
+      p(rx+6,ry+6,2,2,gc);
+      p(rx+3,ry+11,2,1,gc);p(rx+5,ry+9,2,1,gc);
+      p(rx+10,ry+11,2,1,gc);p(rx+9,ry+9,2,1,gc);
+      if(glow){const st=Math.floor(tick/5)%4;const cs=[[1,1],[TW-3,1],[1,TW-3],[TW-3,TW-3]];p(rx+cs[st][0],ry+cs[st][1],2,2,'#ffff88');}
+    }
+  }
+}
+
+// ── DRAW NPC ────────────────────────────────────────────
+function drawNPC(n){
+  const rx=Math.round(n.tx*TW-1-cam.x),ry=Math.round(n.ty*TW-16-cam.y);
+  if(rx<-20||rx>CW+20||ry<-20||ry>CH+20)return;
+  const bob=Math.round(Math.sin(n.anim)*1);
+  cx.globalAlpha=.2;p(rx+2,ry+18,9,2,'#000');cx.globalAlpha=1;
+  p(rx+2,ry+13+bob,3,5,n.col);p(rx+6,ry+13+bob,3,5,n.col);
+  p(rx+1,ry+6+bob,9,8,n.col);
+  p(rx+2,ry+1+bob,8,6,'#d4a060');
+  p(rx+3,ry+3+bob,2,2,'#222');p(rx+7,ry+3+bob,2,2,'#222');
+  p(rx+4,ry+(n.talking?5:4)+bob,4,n.talking?2:1,n.talking?'#c06050':'#a05040');
+  p(rx+2,ry-5+bob,2,6,n.hat);p(rx+5,ry-7+bob,2,8,n.hat);p(rx+8,ry-5+bob,2,6,n.hat);
+  p(rx+3,ry-4+bob,1,5,'#20c040');p(rx+6,ry-6+bob,1,7,'#e8a000');p(rx+9,ry-4+bob,1,5,'#c00020');
+  p(rx+1,ry+1+bob,10,1,n.hat);
+  if(nearNPC===n&&!dialogOpen){
+    p(rx+3,ry-12,9,7,'#ffffc8');p(rx+5,ry-6,3,3,'#ffffc8');
+    cx.fillStyle='#000';cx.font='bold 5px monospace';cx.textAlign='center';cx.fillText('E',rx+7,ry-7);cx.textAlign='left';
+  }
+}
+
+// ── DRAW PLAYER ─────────────────────────────────────────
+function drawPlayer(){
+  const rx=Math.round(pl.x-cam.x),ry=Math.round(pl.y-cam.y);
+  const f=pl.f,s=pl.step,st=pl.state;
+  const lA=st==='walk'?[0,3,0,-3][s]:0,lB=st==='walk'?[0,-3,0,3][s]:0;
+  const aA=st==='walk'?[0,-2,0,2][s]:0,aB=st==='walk'?[0,2,0,-2][s]:0;
+  const bob=st==='walk'?[0,-1,0,-1][s]:0;
+  const strY=st==='rise'?-1:st==='fall'?1:Math.round(pl.squash*.5);
+
+  cx.globalAlpha=.2;p(rx+1,ry+pl.h,pl.w-1,2,'#000');cx.globalAlpha=1;
+
+  if(st==='dig'){
+    const ph=Math.floor(pl.digT/8)%4;
+    p(rx+1,ry+10,3,5,'#282878');p(rx+5,ry+10,3,5,'#282878');
+    p(rx+1,ry+14,3,2,'#3a1808');p(rx+5,ry+14,3,2,'#3a1808');
+    const lx=f>0?1:-1;
+    p(rx+lx+1,ry+4,7,7,'#1848c0');p(rx+lx+1,ry+10,7,2,'#c87020');p(rx+lx+1,ry,7,5,'#dda060');
+    p(rx+lx,ry,9,1,'#c06010');p(rx+lx+1,ry-2,7,3,'#c06010');
+    if(f>0){const py2=ph<2?ry-3:ry+7;p(rx+8,py2,1,12,'#888');p(rx+6,py2-2,5,3,'#c87020');}
+    else{const py2=ph<2?ry-3:ry+7;p(rx-1,py2,1,12,'#888');p(rx-2,py2-2,5,3,'#c87020');}
+    return;
+  }
+
+  if(f>0){p(rx+1,ry+13+lA+bob,2,2,'#4a2810');p(rx+5,ry+13+lB+bob,2,2,'#4a2810');}
+  else{p(rx+6,ry+13+lA+bob,2,2,'#4a2810');p(rx+2,ry+13+lB+bob,2,2,'#4a2810');}
+  if(f>0){p(rx+1,ry+8+lA+bob,2,6,'#282878');p(rx+5,ry+8+lB+bob,2,6,'#282878');}
+  else{p(rx+6,ry+8+lA+bob,2,6,'#282878');p(rx+2,ry+8+lB+bob,2,6,'#282878');}
+  const bh=6+strY,by2=ry+4+bob-Math.max(0,strY);
+  p(rx+1,by2,7,bh,'#1848c0');p(rx+1,ry+9+bob,7,1,'#c87020');
+  if(f>0){
+    p(rx,ry+4+aA+bob,1,6,'#dda060');p(rx+8,ry+4+aB+bob,1,6,'#dda060');
+    p(rx+9,ry+4+aB+bob,2,1,'#888');p(rx+9,ry+5+aB+bob,1,5,'#888');p(rx+8,ry+3+aB+bob,3,2,'#c87020');
+  }else{
+    p(rx+8,ry+4+aA+bob,1,6,'#dda060');p(rx,ry+4+aB+bob,1,6,'#dda060');
+    p(rx-2,ry+4+aB+bob,2,1,'#888');p(rx-1,ry+5+aB+bob,1,5,'#888');p(rx-2,ry+3+aB+bob,3,2,'#c87020');
+  }
+  const hw=7+(pl.squash>1?1:0),hy=ry+1+bob+Math.min(0,strY);
+  p(rx+1,hy,hw,6,'#dda060');
+  if(f>0)p(rx+6,hy+2,1,1,'#222');else p(rx+2,hy+2,1,1,'#222');
+  p(rx+3,hy+4,3,1,'#a05040');
+  p(rx,hy,9,1,'#c06010');p(rx+1,hy-2,7,3,'#c06010');
+  p(rx+2,hy-2,2,1,'#e08018');p(rx+1,hy,7,1,'#804010');
+  p(rx+(f>0?-1:8),ry+4+bob,1,6,'#7a5018');
+  if(!pl.gnd&&pl.jumps===2){cx.globalAlpha=.5;p(rx+1,ry+pl.h,pl.w,2,'#aaffff');cx.globalAlpha=1;}
+}
+
+// ── DRAW ARTIFACTS (pixel art floating) ─────────────────
+const collectedArtifacts=[];
+
+function drawArtPixel(artIdx,rx,ry,bob){
+  // Each artifact drawn pixel by pixel
+  if(artIdx===0){
+    // Vasija de Obsidiana — dark blue/black vessel
+    p(rx+3,ry,2,1,'#5555aa');
+    p(rx+2,ry+1,4,1,'#4444aa');
+    p(rx+1,ry+2,6,2,'#333388');
+    p(rx+1,ry+4,6,1,'#4444aa');
+    p(rx+2,ry+5,4,2,'#333388');
+    p(rx+3,ry+7,2,1,'#222266');
+    // shine
+    p(rx+2,ry+2,1,2,'#8888cc');
+    p(rx+5,ry+1,1,1,'#9999dd');
+  }else if(artIdx===1){
+    // Máscara de Jade — green mask face
+    p(rx+1,ry,6,1,'#40b080');
+    p(rx,ry+1,8,1,'#30a070');
+    p(rx,ry+2,8,3,'#208060');
+    p(rx+1,ry+5,6,1,'#30a070');
+    p(rx+2,ry+6,4,1,'#40b080');
+    // eyes
+    p(rx+1,ry+3,2,1,'#001a00');
+    p(rx+5,ry+3,2,1,'#001a00');
+    // nose
+    p(rx+3,ry+4,2,1,'#105040');
+    // mouth
+    p(rx+2,ry+5,4,1,'#105040');
+    // jade shine
+    p(rx+1,ry+1,1,2,'#70d0a0');
+  }else if(artIdx===2){
+    // Incensario — brown pot with flames
+    p(rx+2,ry,4,1,'#ff8800');
+    p(rx+3,ry+1,2,1,'#ffcc00');
+    p(rx+1,ry+2,6,1,'#994422');
+    p(rx,ry+3,8,3,'#7a3318');
+    p(rx+1,ry+6,6,1,'#994422');
+    p(rx+2,ry+7,4,1,'#7a3318');
+    // handles
+    p(rx-1,ry+3,2,2,'#7a3318');
+    p(rx+7,ry+3,2,2,'#7a3318');
+    // glow
+    p(rx+3,ry,1,2,'#ffff88');
+    p(rx+4,ry,1,2,'#ffcc44');
+  }else if(artIdx===3){
+    // Figura de Tlaloc — blue deity with goggle eyes
+    p(rx+2,ry,4,1,'#2255aa');
+    p(rx+1,ry+1,6,5,'#1a3388');
+    // goggle eyes
+    p(rx+1,ry+2,2,2,'#aaddff');
+    p(rx+5,ry+2,2,2,'#aaddff');
+    p(rx+2,ry+2,1,1,'#001133');
+    p(rx+6,ry+2,1,1,'#001133');
+    // fangs
+    p(rx+2,ry+5,1,2,'#ffffff');
+    p(rx+5,ry+5,1,2,'#ffffff');
+    // body
+    p(rx+2,ry+6,4,2,'#1a3388');
+    p(rx+1,ry+7,6,1,'#2255aa');
+    // headdress
+    p(rx+1,ry,6,1,'#3388cc');
+    p(rx+2,ry-1,4,1,'#44aadd');
+    p(rx+3,ry-2,2,1,'#55bbee');
+  }else if(artIdx===4){
+    // Cuchillo de Silex — diagonal blade
+    p(rx,ry+5,2,1,'#998877');
+    p(rx+1,ry+4,2,2,'#bbaa99');
+    p(rx+2,ry+3,2,2,'#ccbbaa');
+    p(rx+3,ry+2,2,2,'#ddccbb');
+    p(rx+4,ry+1,2,2,'#eeddcc');
+    p(rx+5,ry,3,2,'#fffaee');
+    p(rx+6,ry,2,1,'#ffffff');
+    // edge shine
+    p(rx+5,ry,1,1,'#ffffff');
+    p(rx+4,ry+1,1,1,'#eeddcc');
+    // handle
+    p(rx,ry+5,3,3,'#665544');
+    p(rx+1,ry+6,2,2,'#554433');
+    p(rx,ry+7,3,1,'#887766');
+  }
+}
+
+function drawCollectedArtifacts(){
+  collectedArtifacts.forEach((ca,i)=>{
+    const bob=Math.round(Math.sin(tick*.08+i)*2);
+    const[rx,ry]=wts(ca.x-4,ca.y-20+bob);
+    if(rx<-20||rx>CW+20||ry<-20||ry>CH+20)return;
+    // glow background
+    cx.globalAlpha=.3;
+    cx.fillStyle=ca.col;
+    cx.beginPath();cx.arc(rx+4,ry+4,7,0,Math.PI*2);cx.fill();
+    cx.globalAlpha=1;
+    drawArtPixel(ca.artIdx,rx,ry,bob);
+    // label
+    cx.font='3px monospace';cx.textAlign='center';cx.fillStyle='#ffd700';
+    cx.fillText(ca.name.split(' ')[0],rx+4,ry+13);
+    cx.textAlign='left';
+  });
+}
+
+// ── DRAW PARTICLES ──────────────────────────────────────
+function drawParticles(){
+  particles.forEach(pt=>{
+    cx.globalAlpha=Math.max(0,pt.life/40);
+    p(Math.round(pt.x-cam.x),Math.round(pt.y-cam.y),Math.ceil(pt.sz||1),Math.ceil(pt.sz||1),pt.col);
+  });
+  cx.globalAlpha=1;
+}
+
+// ── DRAW LABELS ─────────────────────────────────────────
+function drawLabels(){
+  cx.textAlign='center';cx.font='bold 4px monospace';
+  [[16,'PIRAMIDE\nDE LA LUNA',9],[58,'PIRAMIDE\nDEL SOL',4],[90,'TEMPLO\nQUETZAL',7],[110,'ALTAR',8]].forEach(([tx,lbl,yo])=>{
+    const rx2=tx*TW+TW/2-cam.x;
+    if(rx2<-40||rx2>CW+40)return;
+    const ry2=(22-yo)*TW-cam.y-8;
+    cx.fillStyle='rgba(255,225,80,.9)';
+    lbl.split('\n').forEach((ln,i)=>cx.fillText(ln,rx2,ry2+i*6));
+  });
+  cx.textAlign='left';
+}
+
+// ── TITLE SCREEN DRAW ───────────────────────────────────
+function drawTitleBg(){
+  const g=cx.createLinearGradient(0,0,0,CH);
+  g.addColorStop(0,'#020118');g.addColorStop(1,'#1a0820');
+  cx.fillStyle=g;cx.fillRect(0,0,CW,CH);
+  // simple pyramid silhouettes
+  cx.fillStyle='#1a0840';
+  [[80,CH,20,40],[160,CH,30,60],[240,CH,14,28]].forEach(([bx,by,hw,h])=>{
+    cx.beginPath();cx.moveTo(bx-hw,by);cx.lineTo(bx,by-h);cx.lineTo(bx+hw,by);cx.fill();
+  });
+  for(let i=0;i<40;i++){
+    const sx=((i*67)%CW),sy=(i*29)%(CH*.5);
+    cx.globalAlpha=(Math.sin(tick*.04+i)+1)*.3+.1;
+    cx.fillStyle='#ffffc8';cx.fillRect(sx,sy,1,1);
+  }
+  cx.globalAlpha=1;
+}
+
+// ── MAIN LOOP ───────────────────────────────────────────
+function loop(){
+  tick++;
+  if(gameStarted){
+    update();
+    drawSky();
+    const sx=Math.max(0,Math.floor(cam.x/TW)-1),ex=Math.min(WW,sx+Math.ceil(CW/TW)+2);
+    const sy=Math.max(0,Math.floor(cam.y/TW)-1),ey=Math.min(WH,sy+Math.ceil(CH/TW)+2);
+    for(let ty=sy;ty<ey;ty++)for(let tx=sx;tx<ex;tx++)drawTile(tx,ty);
+    drawLabels();
+    npcList.forEach(drawNPC);
+    drawPlayer();
+    drawCollectedArtifacts();
+    drawParticles();
+  }else{
+    drawTitleBg();
+  }
+  requestAnimationFrame(loop);
+}
+loop();
+</script>
+</body>
+</html>
